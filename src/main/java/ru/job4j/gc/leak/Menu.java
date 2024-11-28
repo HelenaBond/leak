@@ -10,11 +10,14 @@ public class Menu {
     public static final Integer ADD_POST = 1;
     public static final Integer ADD_MANY_POST = 2;
     public static final Integer SHOW_ALL_POSTS = 3;
-    public static final Integer DELETE_POST = 4;
+    public static final Integer DELETE_ALL_POSTS = 4;
+    public static final Integer DELETE_POST = 5;
 
     public static final String SELECT = "Выберите меню";
     public static final String COUNT = "Выберите количество создаваемых постов";
     public static final String TEXT_OF_POST = "Введите текст";
+    public static final String DELETING_ALL = "Удаление всех постов ...";
+    public static final String DELETE_POST_BY_ID = "Введите id поста для удаления";
     public static final String EXIT = "Конец работы";
 
     public static final String MENU = """
@@ -28,14 +31,16 @@ public class Menu {
     public static void main(String[] args) {
         Random random = new Random();
         UserGenerator userGenerator = new UserGenerator(random);
+        userGenerator.generate();
         CommentGenerator commentGenerator = new CommentGenerator(random, userGenerator);
         Scanner scanner = new Scanner(System.in);
         PostStore postStore = new PostStore();
-        start(commentGenerator, scanner, userGenerator, postStore);
+        start(commentGenerator, scanner, postStore);
     }
 
-    private static void start(CommentGenerator commentGenerator, Scanner scanner, UserGenerator userGenerator, PostStore postStore) {
+    private static void start(CommentGenerator commentGenerator, Scanner scanner, PostStore postStore) {
         boolean run = true;
+
         while (run) {
             System.out.println(MENU);
             System.out.println(SELECT);
@@ -44,12 +49,7 @@ public class Menu {
             if (ADD_POST == userChoice) {
                 System.out.println(TEXT_OF_POST);
                 String text = scanner.nextLine();
-                userGenerator.generate();
-                commentGenerator.generate();
-                var post = new Post();
-                post.setText(text);
-                post.setComments(CommentGenerator.getComments());
-                var saved = postStore.add(post);
+                Post saved = createPost(commentGenerator, postStore, text);
                 System.out.println("Generate: " + saved.getId());
             } else if (ADD_MANY_POST == userChoice) {
                 System.out.println(TEXT_OF_POST);
@@ -57,19 +57,28 @@ public class Menu {
                 System.out.println(COUNT);
                 String count = scanner.nextLine();
                 memUsage();
-                for (int i = 0; i < Integer.parseInt(count); i++) {
+                int amount = Integer.parseInt(count);
+                for (int i = 0; i < amount; i++) {
                     System.out.printf("\rGenerate %.2f%% %.2fMb",
-                            ((double) i / Integer.parseInt(count)) * 100,
+                            ((double) i / amount) * 100,
                             memUsage());
-                    createPost(commentGenerator, userGenerator, postStore, text);
+                    createPost(commentGenerator, postStore, text);
                 }
                 System.out.println();
                 memUsage();
             } else if (SHOW_ALL_POSTS == userChoice) {
                 System.out.println(PostStore.getPosts());
-            } else if (DELETE_POST == userChoice) {
-                System.out.println("Удаление всех постов ...");
+            } else if (DELETE_ALL_POSTS == userChoice) {
+                System.out.println(DELETING_ALL);
                 postStore.removeAll();
+            } else if (DELETE_POST == userChoice) {
+                System.out.println(DELETE_POST_BY_ID);
+                int id = Integer.parseInt(scanner.nextLine());
+                Post deleted = postStore.remove(id);
+                String answer = deleted == null
+                        ? "Пост с id = %s не существует%n".formatted(id)
+                        : "Пост с id = %s удалён%n".formatted(id);
+                System.out.printf(answer);
             } else {
                 run = false;
                 System.out.println(EXIT);
@@ -85,14 +94,13 @@ public class Menu {
         return (double) usedMem / 1024 / 1024;
     }
 
-    private static void createPost(CommentGenerator commentGenerator,
-                                   UserGenerator userGenerator,
+    private static Post createPost(CommentGenerator commentGenerator,
                                    PostStore postStore, String text) {
-        userGenerator.generate();
         commentGenerator.generate();
         var post = new Post();
         post.setText(text);
-        post.setComments(CommentGenerator.getComments());
+        post.setComments(commentGenerator.getComments());
         postStore.add(post);
+        return post;
     }
 }

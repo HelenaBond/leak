@@ -11,15 +11,18 @@ public class PostStore {
 
     private final AtomicInteger atomicInteger = new AtomicInteger(1);
 
-    public Post add(Post post) {
+    public void add(Post post) {
         var id = atomicInteger.getAndIncrement();
         post.setId(id);
         POSTS.put(id, post);
-        return post;
     }
 
     public void removeAll() {
         POSTS.clear();
+    }
+
+    public Post remove(int id) {
+        return POSTS.remove(id);
     }
 
     public static Collection<Post> getPosts() {
